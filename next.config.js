@@ -7,6 +7,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'pass-interviews-users-images.s3.amazonaws.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'randomuser.me',
+      },
     ],
   },
 }

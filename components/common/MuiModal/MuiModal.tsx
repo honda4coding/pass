@@ -12,6 +12,7 @@ import Select from 'react-select';
 import { API_URL } from '@/lib/utils/urls';
 import axios, { AxiosError } from 'axios';
 import { fireSuccess, fireError } from '@/lib/utils/toasts'
+import PaypalModal from '../PaypalModal/PaypalModal';
 
 export default function MuiModal(props: any) {
     console.log("props in MuiModal", props.timeslots);
@@ -20,6 +21,8 @@ export default function MuiModal(props: any) {
     const [timesPool, setTimesPool] = useState<{ value: string, label: string }[]>();
     const [show, setShow] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
+    const [showPaypal, setShowPaypal] = useState<boolean>(false);
+    const [createdInterviewId, setCreatedInterviewId] = useState<string | null>(null);
 
     console.log("selectedDate", day);
     console.log("selectedTime", selectedTime);
@@ -40,7 +43,16 @@ export default function MuiModal(props: any) {
 
         const decodeDay = d.day();
         console.log("decodeDay", decodeDay)
-        const t = props.timeslots[decodeDay].hours.map((hour: string) => ({ value: hour, label: hour }));;
+        const timeslot = props.timeslots.find((ts: any) => ts.day === decodeDay);
+        if (!timeslot || !timeslot.hours || timeslot.hours.length === 0) {
+            fireError('No available timeslots for this day');
+            setDay(null);
+            setTimesPool([]);
+            setSelectedTime(null);
+            setShow(false);
+            return;
+        }
+        const t = timeslot.hours.map((hour: string) => ({ value: hour, label: hour }));
         console.log("timesPool", t);
         setDay(d);
         setTimesPool(t);
@@ -53,7 +65,15 @@ export default function MuiModal(props: any) {
     }
 
     const handleBook = async () => {
-        let formatDate = dayjs(day!.add(4, 'hour')).toISOString().split('T')[0].concat('T', selectedTime!, ':00.000+03:00');
+        const timeParts = selectedTime!.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        let hours = parseInt(timeParts![1], 10);
+        const minutes = timeParts![2];
+        const ampm = timeParts![3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        const hh = hours.toString().padStart(2, '0');
+        
+        let formatDate = day!.format('YYYY-MM-DD') + `T${hh}:${minutes}:00.000Z`;
         console.log(formatDate);
         try {
             setLoading(true)
@@ -70,8 +90,9 @@ export default function MuiModal(props: any) {
             );
             console.log(JSON.stringify(response?.data));
             setLoading(false);
-            fireSuccess('Interview booked successfully');
-            props.setShowModal(false);
+            fireSuccess('Interview booked successfully! Please pay to confirm.');
+            setCreatedInterviewId(response?.data?.interview?._id);
+            setShowPaypal(true);
         } catch (err) {
             setLoading(false);
             const error = err as AxiosError;
@@ -85,6 +106,23 @@ export default function MuiModal(props: any) {
             }
         }
     }
+    if (showPaypal && createdInterviewId) {
+        return (
+            <PaypalModal
+                showModal={showPaypal}
+                setShowModal={(val: boolean) => {
+                    setShowPaypal(val);
+                    if (!val) props.setShowModal(false);
+                }}
+                accessToken={props.accessToken}
+                interviewId={createdInterviewId}
+                updatePaymentStatus={() => {
+                    props.setShowModal(false);
+                }}
+            />
+        );
+    }
+
     return (
         <div >
             <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -98,6 +136,10 @@ export default function MuiModal(props: any) {
                             label="Select Day"
                             value={day}
                             disablePast
+                            shouldDisableDate={(date) => {
+                                const availableDays = props.timeslots.map((ts: any) => ts.day);
+                                return !availableDays.includes(date.day());
+                            }}
                             onChange={(newValue) => handleDaySelection(newValue)}
                         />
 

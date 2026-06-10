@@ -37,6 +37,9 @@ export default function InterviewCard({ interview, accessToken, filterAnIntervie
             setLoading(false);
             filterAnInterview(interview._id);
             fireSuccess('Confirmed successfully');
+            if (response?.data?.emailContent) {
+                alert("تم إرسال الإيميل التالي للمستخدم:\n\n" + response.data.emailContent);
+            }
         } catch (err) {
             setLoading(false);
             const error = err as AxiosError;
