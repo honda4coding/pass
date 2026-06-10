@@ -1,35 +1,25 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 
-import { FRONT_URL } from './lib/utils/urls';
-
 export default function middleware(req: NextRequest) {
-    let url = req.url
-    // let session = req.cookies.get("session");
-    // let username = (session) ? JSON.parse(session.value).username : null;
-    // let info = (session) ? JSON.parse(session.value).info : null;
-    
+    const url = req.nextUrl
+    const origin = req.nextUrl.origin // e.g. https://pass-sage.vercel.app
 
-    let username=req.cookies.get('username')?.value;
-    let info=req.cookies.get('info');
-    let skills=req.cookies.get('skills');
-    let profile = `${FRONT_URL}/users/${username}`;
-    console.log(username);
-    console.log(info);
-    console.log(skills);
-    console.log(FRONT_URL);
-    console.log(profile);
-    // console.log(session?.value)
-    if (username && (url === `${FRONT_URL}/login` || url === `${FRONT_URL}/signup`)) {
+    let username = req.cookies.get('username')?.value;
+    let info = req.cookies.get('info');
+    let skills = req.cookies.get('skills');
+    let profile = `${origin}/users/${username}`;
+
+    if (username && (url.pathname === '/login' || url.pathname === '/signup')) {
         return NextResponse.redirect(profile);
     }
 
-    else if (info && skills && (url === `${FRONT_URL}/users/polish` || url === `${FRONT_URL}/users/polish-skills`)) {
+    else if (info && skills && (url.pathname === '/users/polish' || url.pathname === '/users/polish-skills')) {
         return NextResponse.redirect(profile);
     }
 
-    else if(!username && (url === `${FRONT_URL}/users/polish` || url === `${FRONT_URL}/users/polish-skills`|| url===`${FRONT_URL}/users/settings`|| url===`${FRONT_URL}/manage-interviews`)){
-        return NextResponse.redirect(`${FRONT_URL}/login`);
+    else if (!username && (url.pathname === '/users/polish' || url.pathname === '/users/polish-skills' || url.pathname === '/users/settings' || url.pathname === '/manage-interviews')) {
+        return NextResponse.redirect(`${origin}/login`);
     }
 
 
